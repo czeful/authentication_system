@@ -1,5 +1,5 @@
 const express = require("express");
-const dotenv = require("dotenv");
+require('dotenv').config();
 const ejs = require("ejs");
 const express_session = require("express-session");
 const bcryptjs = require("bcryptjs");
@@ -8,14 +8,18 @@ const passport = require("passport");
 const passport_local = require("passport-local");
 const {Pool} = require("pg");
 
-// Conecting to PostgreSQL
 
+const app =express();
+console.log("🔍 Переменные окружения:", process.env);
+
+
+// Conecting to PostgreSQL
 const pool = new Pool({
-    user: '', 
-    host: '',
-    database: '',
-    password: '',
-    port: 5432,
+    user: process.env.pg_user, 
+    host: process.env.pg_host,
+    database: process.env.pg_database,
+    password: process.env.pg_password,
+    port: process.env.pg_port,
 })
 
 // testing conetcting of database
@@ -44,7 +48,7 @@ app.get('/', (req, res)=>{
     res.send("Hello World");
 })
 
-const PORT = 3000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, ()=>{
     console.log(`Server work at https://localhost:${PORT}`);
