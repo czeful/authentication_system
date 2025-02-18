@@ -1,165 +1,41 @@
 const express = require("express");
-require('dotenv').config();
-const ejs = require("ejs");
+require("dotenv").config();
 const session = require("express-session");
-const bcryptjs = require("bcryptjs");
-const connect_pg_simple = require("connect-pg-simple");
-const passport = require("passport");
-const passport_local = require("passport-local");
-const {Pool} = require("pg");
-const body_parser = require("body-parser");
-const cors = require('cors');
-const nodemon = require('nodemon')
-const morgan = require('morgan')
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const morgan = require("morgan");
+const pool = require("./config/database");  // Подключаем базу
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
-const app =express();
+const app = express();
 
+app.set("view engine", "ejs");
+app.set("views", __dirname + "/view");
 
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+app.use(morgan("dev"));
 
-
-
-app.set('view engine', 'ejs'); // Указываем EJS как шаблонизатор
-app.set('views', __dirname + '/view'); // Директория с шаблонами (по умолчанию "views")
-
-
-// middlewares нашего проекта 
-app.use(body_parser.urlencoded({ extended: true }));
-app.use(express.static('public')); // Для статических файлов
-app.use(morgan('dev')); // Выводит подробное логирование запросов
-app.use(session({
-    secret: 'your_secret_key',  // Замените на случайную строку
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }   // Установите `true`, если используете HTTPS
-}));
-
-
-// Conecting to PostgreSQLx
-const pool = new Pool({
-    user: process.env.pg_user, 
-    host: process.env.pg_host,
-    database: process.env.pg_database,
-    password: process.env.pg_password,
-    port: process.env.pg_port,
-})
-
-// testing conetcting of database
-
-pool.connect()
-    .then(client=>{
-        console.log('Connected to Database for Anelyaa');
-        client.release();
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || "your_secret_key",
+        resave: false,
+        saveUninitialized: true,
+        cookie: { secure: false },
     })
-    .catch(err => console.error('Connecting error', err.stack));
+);
 
-// routes
-app.get('/', (req, res) => {
-    res.render("index", {title: 'Home'});
-});
+// Используем маршруты
+app.use("/", authRoutes);
+app.use("/", userRoutes);
 
-// regist
-app.get ('/reg', (req, res)=>{
-    res.render('reg', {title: 'reg'})
-})
-app.post('/reg', async (req, res) => {    // Прроводим регистрацию и сохроняем введенные данные в базу данных
-    const { name, email, password, confirm_password, phone_number} = req.body;  
-
-    if (password !== confirm_password) {
-        return res.status(400).send('Пароли не совпадают');
-    }
-
-    try {
-        const hashedPassword = await bcryptjs.hash(password, 10);
-
-
-        const result = await pool.query(
-            'INSERT INTO users (name, email, password, phone_number) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, email, hashedPassword, phone_number]
-        );
-
-        res.redirect('/sign_in');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Ошибка при регистрации');
-    }
+app.get("/", (req, res) => {
+    res.render("index", { title: "Главная страница" });
 });
 
 
-// sign
-app.get('/sign_in', (req,res)=>{
-    res.render('sign_in', {title: 'sign'})
-})
-
-app.post('/sign_in', async (req, res)=>{
-    const {email, password} = req.body;
-    
-    try{
-        const userResult = await pool.query('SELECT * from users where email = $1', [email]);
-        if(userResult.rows.length === 0){
-            return res.status(400).send('Неверный email или пароль')
-        }
-
-        const user = userResult.rows[0];
-
-        //Проверям пароль
-
-        const isMatch = await bcryptjs.compare(password, user.password);
-
-        if(!isMatch){
-            return res.status(400).send('Неверный email или пароль(')
-        }
-
-        req.session.user = { id: user.id, name: user.name, email: user.email };
-        res.redirect(`/profile/${user.id}`);
-    }catch(err){
-        console.error(err)
-        res.status(500).send("Что то пошло ни так")
-    }
-
-} )
-
-app.get ('/users', async(req, res)=>{
-    try{
-        const result = await pool.query('Select * FROM users');
-        console.log(result)
-        res.json(result.rows)
-    }catch(err){
-        console.err(err);
-        res.status(500).send('Database error')
-    }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Server running at http://localhost:${PORT}`);
 });
-
-function isAuthenticated(req, res, next){
-    if(req.session && req.session.user){
-        return next();
-    }else{
-        res.redirect('/sign_in')
-    }
-}
-
-app.get('/profile/:userid',isAuthenticated, async(req, res)=>{
-    const {userid, username} = req.params;
-    try{
-        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userid]);
-        
-        if (userResult.rows.length === 0){
-            return res.status(404).send('Пользователь не найден');
-        }
-        const user = userResult.rows[0];
-        
-        res.render('profile', {title: user.name , user});
-    }catch(err){
-        console.error(err);
-        res.status(500).send('Ошибка при получение данных о пользователе')
-    }
-})
-
-
-
-
-// server init =====================================
-const PORT = process.env.PORT;
-
-app.listen(PORT, ()=>{
-    console.log(`Server work at http://localhost:${PORT}`);
-})
