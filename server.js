@@ -77,7 +77,7 @@ app.post('/reg', async (req, res) => {    // Прроводим регистра
             [name, email, hashedPassword, phone_number]
         );
 
-        res.send('Регистрация прошла успешно');
+        res.redirect('/sign_in');
     } catch (err) {
         console.error(err);
         res.status(500).send('Ошибка при регистрации');
@@ -110,7 +110,7 @@ app.post('/sign_in', async (req, res)=>{
         }
 
         req.session.user = { id: user.id, name: user.name, email: user.email };
-        res.send('Вход выполенен успешно бро')
+        res.redirect(`/profile/${user.id}`);
     }catch(err){
         console.error(err)
         res.status(500).send("Что то пошло ни так")
@@ -128,6 +128,31 @@ app.get ('/users', async(req, res)=>{
         res.status(500).send('Database error')
     }
 });
+
+function isAuthenticated(req, res, next){
+    if(req.session && req.session.user){
+        return next();
+    }else{
+        res.redirect('/sign_in')
+    }
+}
+
+app.get('/profile/:userid',isAuthenticated, async(req, res)=>{
+    const {userid, username} = req.params;
+    try{
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userid]);
+        
+        if (userResult.rows.length === 0){
+            return res.status(404).send('Пользователь не найден');
+        }
+        const user = userResult.rows[0];
+        
+        res.render('profile', {title: user.name , user});
+    }catch(err){
+        console.error(err);
+        res.status(500).send('Ошибка при получение данных о пользователе')
+    }
+})
 
 
 
