@@ -1,5 +1,7 @@
 const express = require("express");
 require("dotenv").config();
+const {Server} = require("socket.io");
+const http = require('http');
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -9,6 +11,8 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server)
 
 app.set("view engine", "ejs");
 app.set("views", __dirname + "/view");
@@ -34,6 +38,33 @@ app.get("/", (req, res) => {
     res.render("index", { title: "Главная страница" });
 });
 
+
+
+// Подключаем WebSockets
+io.on("connection", (socket) => {
+    console.log("🔵 User connected:", socket.id);
+
+    socket.on("sendMessage", async ({ chat_id, sender_id, content }) => {
+        try {
+            const result = await pool.query(
+                "INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *",
+                [chat_id, sender_id, content]
+            );
+
+            io.to(`chat_${chat_id}`).emit("newMessage", result.rows[0]);
+        } catch (err) {
+            console.error("Ошибка при отправке сообщения:", err);
+        }
+    });
+
+    socket.on("joinChat", (chat_id) => {
+        socket.join(`chat_${chat_id}`);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("🔴 User disconnected:", socket.id);
+    });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

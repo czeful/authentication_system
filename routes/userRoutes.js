@@ -4,15 +4,6 @@ const isAuthenticated = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-router.get("/users", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM users");
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
-});
 
 router.get("/profile/:userid", isAuthenticated, async (req, res) => {
     const { userid } = req.params;
