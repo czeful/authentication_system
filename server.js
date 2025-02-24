@@ -20,6 +20,12 @@ app.set("views", __dirname + "/view");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(morgan("dev"));
+app.use(express.json());
+// Разрешить запросы с http://localhost:3000
+app.use(cors({
+    origin: "http://localhost:3000"
+}));
+
 
 app.use(
     session({
