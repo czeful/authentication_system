@@ -5,9 +5,9 @@ const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
-router.get("/sign_in", (req, res) => {
-    res.render("sign_in", { title: "sign" });
-});
+// router.get("/sign_in", (req, res) => {
+//     res.render("sign_in", { title: "sign" });
+// });
 
 // post rout to sign and check data that user insert
 router.post("/api/login", async (req, res) => {
@@ -36,9 +36,9 @@ router.post("/api/login", async (req, res) => {
     }
 });
 
-router.get("/reg", (req, res) => {
-    res.render("reg", { title: "Регистрация" });
-});
+// router.get("/reg", (req, res) => {
+//     res.render("reg", { title: "Регистрация" });
+// });
 
 // Post rout to add new user into database
 router.post("/api/reg", async (req, res) => {
