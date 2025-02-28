@@ -9,6 +9,7 @@ const morgan = require("morgan");
 const pool = require("./config/database");  // Подключаем базу
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const otpRoutes = require("./routes/otp")
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,7 @@ app.use(
 // Используем маршруты
 app.use("/", authRoutes);
 app.use("/", userRoutes);
+app.use("/", otpRoutes);
 
 app.get("/", (req, res) => {
     res.render("index", { title: "Главная страница" });
